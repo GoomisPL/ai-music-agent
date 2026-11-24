@@ -72,6 +72,32 @@ SETTINGS = {
     "acoustic": ["wooden porch", "sunflower field", "fishing village", "cabin by a river", "vineyard hills",
                  "harbor cafe terrace", "orchard with a swing"],
 }
+# 2.7.1: where the family pool does not fit the genre (cafe jazz in "acoustic" got sunflower fields and a fiddle)
+SETTINGS_SUB = {
+    "cafe jazz": ["small corner cafe with a window seat", "jazz cafe with a piano and warm lamps", "street cafe terrace",
+                  "bookshop cafe", "cafe counter with an espresso machine", "cafe by a canal", "rooftop cafe"],
+    "smooth jazz": ["hotel lounge with a city view", "wine bar with soft lamps", "penthouse with a skyline view",
+                    "harbor bar by the water", "jazz club stage with a saxophone stand"],
+    "jazzhop": ["record shop", "small studio with a turntable", "cafe window seat", "city park bench"],
+    "celtic": ["green hills with stone walls", "old stone bridge", "coastal cliffs", "village tavern",
+               "standing stones", "harbor village"],
+    "sci-fi score": ["spaceship bridge facing a planet", "alien desert under two moons", "orbital station window",
+                     "futuristic city at night", "nebula seen from a small shuttle"],
+    "space ambient": ["planet rings seen from orbit", "astronaut floating near a station", "nebula clouds",
+                      "quiet moon surface with Earth rising", "deep space observatory"],
+    "dark score": ["abandoned mansion hallway", "foggy forest path", "ruined chapel", "old lighthouse in a storm",
+                   "empty train station"],
+    "fantasy adventure": ["castle above a valley", "elven forest with lanterns", "dragon over the mountains",
+                          "wizard tower library", "harbor of a fantasy city"],
+}
+EXTRA_SUB = {
+    "cafe jazz": ["vibraphone", "muted trumpet", "clarinet", "jazz guitar", "brushed snare", "upright bass"],
+    "smooth jazz": ["tenor saxophone-like lead", "flugelhorn-like lead", "jazz guitar", "rhodes piano"],
+    "celtic": ["uilleann pipes-like lead", "bouzouki", "irish flute", "accordion"],
+    "acoustic guitar": ["second acoustic guitar", "cello", "soft piano", "shaker"],
+    "drum and bass": ["rhodes piano", "string pad", "vocal-like pad", "sub bass"],
+    "baroque": ["oboe", "recorder", "harpsichord", "cello continuo"],
+}
 TIMES = ["dawn", "early morning", "late morning", "noon", "golden hour", "blue hour", "deep night", "overcast afternoon"]
 WEATHER = ["clear sky", "light rain", "fresh snow", "drifting fog", "after the rain", "warm wind", "first frost", "summer haze"]
 
@@ -159,9 +185,10 @@ def pick_texture(family: str, rng: random.Random, avoid: str = "") -> str:
     return rng.choice(pool)
 
 
-def pick_scene(family: str, history: list, rng: random.Random) -> str:
+def pick_scene(family: str, history: list, rng: random.Random, substyle: str | None = None) -> str:
     recent = " ".join(str(h.get("scene") or "") for h in history[-8:]).lower()
-    settings = [s for s in (SETTINGS.get(family) or SETTINGS["chill"]) if s not in recent] or SETTINGS.get(family) or SETTINGS["chill"]
+    pool = SETTINGS_SUB.get(str(substyle or "").lower()) or SETTINGS.get(family) or SETTINGS["chill"]
+    settings = [s for s in pool if s not in recent] or pool
     times = [t for t in TIMES if t not in recent] or TIMES
     weather = [w for w in WEATHER if w not in recent] or WEATHER
     return f"{rng.choice(settings)}, {rng.choice(times)}, {rng.choice(weather)}"
@@ -217,11 +244,18 @@ def alt_spec(b: dict, spec: dict, history: list, rng: random.Random) -> dict:
     bpm = pick_bpm(spec, history, rng, family, avoid=[int(b["bpm"])])
     mood = pick_mood(family, history, rng, avoid=[b["mood"]])
     own = list(spec.get("instruments") or [])
-    extra = [i for i in (EXTRA_INSTRUMENTS.get(family) or []) if i not in (b.get("instruments") or [])]
+    pool = EXTRA_SUB.get(str(sub).lower()) or EXTRA_INSTRUMENTS.get(family) or []
+    extra = [i for i in pool if i not in (b.get("instruments") or [])]
     rng.shuffle(own)
     rng.shuffle(extra)
     lead = extra[:1] or own[:1]
-    inst = list(dict.fromkeys(lead + own[:2] + extra[1:2]))[:4]
+    inst = []
+    drums = {"drums", "drum", "snare", "percussion", "kick", "breakbeat", "bodhran", "shaker"}
+    for i in lead + own + extra[1:]:  # max one drum part ("brushed drums" + "brushed snare" was a duplicate)
+        if i in inst or (words(i) & drums and any(words(x) & drums for x in inst)):
+            continue
+        inst.append(i)
+    inst = inst[:4]
     texture = pick_texture(family, rng, avoid=b.get("texture", ""))
     mp = f"{sub}, {mood}, {', '.join(inst)}, {texture}"[:260]
     return {"key": key, "bpm": bpm, "mood": mood, "instruments": inst, "music_prompt": mp,

@@ -292,6 +292,7 @@ def main() -> int:
                     "seconds": round(q.get("duration") or 0),
                     "mood": br["mood"], "bpm": br["bpm"], "music_prompt": br["music_prompt"],
                     "scene": br.get("scene"), "texture": br.get("texture"),
+                    "hooks": br.get("hooks"), "short_angles": br.get("short_angles"),
                     "publish_at": up.get("publish_at"), "short_id": up.get("short_id"),
                     "short_ids": [s["id"] for s in up.get("shorts", []) if s.get("id")],
                     "fingerprint": q.get("fingerprint"), "thumb_hash": vis.get("thumb_hash"), "views": None,

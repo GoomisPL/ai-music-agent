@@ -146,16 +146,98 @@ SHORT_ANGLES = {
     "ambient": ["Sleep Music", "Calm Breathing Music"], "acoustic": ["Coffee Shop Vibes", "Rainy Day Cafe Music"],
 }
 
+# 2.7.1: the 3 fixed hooks per family repeated on every Short -> bigger pools (family = fits every substyle of it,
+# substyle = genre-specific). Max ~32 characters so the line fits the card. Chosen per track avoiding recent ones.
+HOOK_POOL = {
+    "chill": ["POV: late night study session", "Lofi for when you need to focus", "Put this on and relax",
+              "Homework but make it cozy", "3 AM and still studying", "Your brain on calm mode",
+              "Rain outside, beats inside", "Study break? Not yet.", "This beat fixes bad days"],
+    "classical": ["Calm piano for your study time", "POV: quiet evening with a book", "Music to slow down your mind",
+                  "Reading hits different with this", "Old library, new focus", "Strings for a calm mind",
+                  "Candlelight and pages", "Let your thoughts settle", "Elegant focus music"],
+    "electronic": ["POV: 2 AM night drive", "Music for deep work mode", "Coding at night hits different",
+                   "City lights, no traffic", "Headphones on, world off", "Focus mode: activated",
+                   "One more lap around the city", "Synths for late work", "Neon, rain, and this track"],
+    "cinematic": ["This feels like a movie scene", "Music for main character energy", "Epic focus music",
+                  "Write your next chapter", "The calm before the battle", "Feels like a trailer",
+                  "Your quest starts now", "Score for your daydream", "Cinematic focus mode"],
+    "ambient": ["Close your eyes for 40 seconds", "Music for falling asleep", "Breathe in. Breathe out.",
+                "Let the noise fade away", "Sleep starts here", "Float for a moment",
+                "Slow down. Just listen.", "Quiet mind, deep focus", "Unwind in 40 seconds"],
+    "acoustic": ["Slow morning, warm sound", "Music for a sunny afternoon", "Put the kettle on",
+                 "Simple, warm, calm", "Weekend morning vibes", "Strings and sunshine",
+                 "Unplug for a minute", "Cozy corner music", "Breathe and enjoy the moment"],
+}
+HOOK_SUB = {
+    "cafe jazz": ["POV: cozy coffee shop morning", "Coffee + this song = calm", "Rainy day cafe vibes",
+                  "Table by the cafe window", "Espresso and a slow piano"],
+    "smooth jazz": ["Smooth jazz for a slow evening", "Sax, lights, and city calm", "After-work jazz mood"],
+    "jazzhop": ["Jazzy beats for focus", "Brushes, keys, and calm"],
+    "lofi hip hop": ["Lofi for your study grind", "Beats to finish that essay"],
+    "celtic": ["POV: walking the old hills", "Music from the misty highlands", "A tavern tale in 40 seconds"],
+    "acoustic guitar": ["Just a guitar and the morning", "Fingerpicked calm"],
+    "baroque": ["Bach-style focus mode", "Baroque for deep study"],
+    "solo piano": ["Just piano. Just calm.", "Piano for a quiet night"],
+    "sci-fi score": ["POV: drifting past a new planet", "Music for a long space voyage"],
+    "space ambient": ["Floating between the stars", "Sleep in zero gravity"],
+    "nature ambient": ["Forest sounds for your mind", "Like a walk in the woods"],
+    "dark score": ["Something is watching", "Dark music for deep writing"],
+    "drum and bass": ["Liquid DnB for flow state", "Rolling beats, clear mind"],
+    "synthwave": ["Retro drive at midnight", "Back to the neon 80s"],
+    "deep house": ["Deep house for deep work", "Sunset rooftop groove"],
+}
+ANGLE_POOL = {
+    "chill": ["Late Night Lofi", "Lofi to Focus", "Chill Beats to Study", "Cozy Study Beats", "Lofi for Homework"],
+    "classical": ["Calm Piano for Reading", "Music to Slow Down", "Classical Focus Music", "Quiet Study Music",
+                  "Music for Reading"],
+    "electronic": ["Night Drive Music", "Deep Work Music", "Coding Music", "Late Night Focus", "City Night Music"],
+    "cinematic": ["Epic Focus Music", "Cinematic Motivation", "Music for Writing", "Fantasy Reading Music",
+                  "Movie Score Vibes"],
+    "ambient": ["Sleep Music", "Calm Breathing Music", "Meditation Music", "Deep Focus Ambient", "Relaxing Sleep Sounds"],
+    "acoustic": ["Morning Acoustic Music", "Calm Work Music", "Slow Morning Music", "Relaxing Instrumental",
+                 "Music for Reading"],
+}
+ANGLE_SUB = {
+    "cafe jazz": ["Coffee Shop Vibes", "Rainy Day Cafe Music", "Cafe Jazz for Work"],
+    "smooth jazz": ["Evening Jazz Lounge", "Smooth Jazz for Work"],
+    "celtic": ["Celtic Fantasy Music", "Music from the Highlands"],
+    "sci-fi score": ["Space Focus Music", "Sci-Fi Ambient"],
+    "space ambient": ["Space Sleep Music", "Music from Orbit"],
+    "fantasy adventure": ["Fantasy Reading Music", "Adventure Music"],
+    "dark score": ["Dark Writing Music", "Mysterious Ambience"],
+    "synthwave": ["Retro Night Drive", "80s Synth Vibes"],
+}
 
-def short_hook(family: str, idx: int = 0) -> str:
-    hooks = SHORT_HOOKS.get(family) or ["Music to relax & focus"]
+
+def pick_shorts(substyle: str, family: str, history: list, rng, avoid: list | None = None) -> dict:
+    """3 hooks + 2 title angles for this track's Shorts, not used by the last ~8 tracks (nor in `avoid`)."""
+    recent = {str(x).lower() for h in history[-8:] for x in (h.get("hooks") or []) + (h.get("short_angles") or [])}
+    recent |= {str(x).lower() for x in (avoid or [])}
+    hooks = list(dict.fromkeys(HOOK_SUB.get(str(substyle).lower(), []) + HOOK_POOL.get(family, [])))
+    fresh = [x for x in hooks if x.lower() not in recent] or hooks or ["Music to relax & focus"]
+    sub_first = [x for x in fresh if x in HOOK_SUB.get(str(substyle).lower(), [])]
+    rest = [x for x in fresh if x not in sub_first]
+    rng.shuffle(sub_first)
+    rng.shuffle(rest)
+    chosen = (sub_first[:1] + rest + sub_first[1:])[:3]  # one genre-specific line (when there is one) + two others
+    sub_a = [a for a in ANGLE_SUB.get(str(substyle).lower(), []) if a.lower() not in recent]
+    fam_a = [a for a in ANGLE_POOL.get(family, []) if a.lower() not in recent] or ANGLE_POOL.get(family, [])
+    rng.shuffle(sub_a)
+    rng.shuffle(fam_a)
+    angles = (sub_a[:1] + fam_a)[:2]  # one genre-specific angle (when there is one) + one from the family
+    return {"hooks": chosen, "short_angles": angles}
+
+
+def short_hook(family: str, idx: int = 0, brief: dict | None = None) -> str:
+    hooks = (brief or {}).get("hooks") or SHORT_HOOKS.get(family) or ["Music to relax & focus"]
     return hooks[idx % len(hooks)]
 
 
-def short_title(substyle: str, name: str, suffix: str = " | AI Music", idx: int = 0, family: str = "") -> str:
-    """Short #1: '<name> – <phrase>'; Shorts #2, #3: other search angles of the same style family."""
+def short_title(substyle: str, name: str, suffix: str = " | AI Music", idx: int = 0, family: str = "",
+                angles: list | None = None) -> str:
+    """Short #1: '<name> – <phrase>'; Shorts #2, #3: other search angles (2.7.1: rotated per track)."""
     p = phrase(substyle).split(" & ")[0].split(" / ")[0]
-    angles = SHORT_ANGLES.get(family) or []
+    angles = angles or SHORT_ANGLES.get(family) or []
     if idx > 0 and angles:
         p = angles[(idx - 1) % len(angles)]
     return f"{name} – {p}{suffix} #Shorts"[:100]

@@ -7,6 +7,7 @@ its own Shorts, all scheduled for the next day at the usual publish time. Files:
 from __future__ import annotations
 
 import random
+import re
 from datetime import datetime, timedelta, timezone
 
 from . import seo
@@ -35,7 +36,17 @@ def make_brief(ctx: Ctx, br: dict, rng: random.Random, variant_name: str | None 
     spec = variant_spec(br, variant_name)
     if spec:
         b.update(spec)
-    b["scene"] = variety.pick_scene(br["style_family"], hist + [{"scene": br.get("scene")}], rng)
+    b["scene"] = variety.pick_scene(br["style_family"], hist + [{"scene": br.get("scene")}], rng, b["substyle"])
+    # 2.7.1: own Shorts hooks/angles (not the main track's) and own hashtags (the main one's were about its scene)
+    from .steps.brief import seo_shorts
+    b.update(seo_shorts(b, hist, rng, avoid=(br.get("hooks") or []) + (br.get("short_angles") or [])))
+    b.pop("title_candidates", None)
+    tags: list[str] = []
+    for t in seo.first_hashtags(b["substyle"]) + ["#" + re.sub(r"[^A-Za-z0-9]", "", b["substyle"].title()),
+                                                  "#InstrumentalMusic", "#RelaxingMusic"]:
+        if t.lower() not in [x.lower() for x in tags]:
+            tags.append(t)
+    b["hashtags"] = tags[:5]
     raw = None
     try:
         if llm.ensure_server(ctx.cfg, ctx.paths, ctx.log):
@@ -143,6 +154,7 @@ def run(ctx: Ctx, br: dict, q: dict, up_main: dict) -> dict:
                      "key": b.get("key"), "seconds": round(bq.get("duration") or 0), "mood": b["mood"], "bpm": b["bpm"],
                      "music_prompt": b.get("music_prompt"), "publish_at": rec["publish_at"], "bonus": True,
                      "scene": b.get("scene"), "texture": b.get("texture"),
+                     "hooks": b.get("hooks"), "short_angles": b.get("short_angles"),
                      "fingerprint": bq.get("fingerprint"), "views": None,
                      "short_ids": [x["id"] for x in rec.get("shorts", []) if x.get("id")]})
         save_history(ctx.paths, hist)

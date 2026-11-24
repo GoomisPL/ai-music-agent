@@ -302,7 +302,7 @@ def upload_shorts(ctx: Ctx, brief: dict, up: dict, out) -> None:
                 when = (datetime.now(timezone.utc).astimezone(zone) + timedelta(days=off)).replace(
                     hour=hh, minute=mm, second=0, microsecond=0)
             s_title = seo.short_title(brief["substyle"], brief["base_title"], cfg["channel"]["title_suffix"],
-                                      idx=i, family=brief.get("style_family", ""))
+                                      idx=i, family=brief.get("style_family", ""), angles=brief.get("short_angles"))
             s_links = {"channel": up.get("channel_url") or channel_url(cfg, ctx.paths)}
             s_desc = description(cfg, brief, extra=f"🎵 Full track ▶️ {up['url']}", links=s_links)
             sb = body(cfg, s_title, s_desc, tags(brief, cfg), when)

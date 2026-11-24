@@ -85,7 +85,7 @@ def pick_fixed(pick: dict, history: list, rng: random.Random) -> dict:
     family = pick["family"]
     return {"key": variety.pick_key(history, rng), "bpm": variety.pick_bpm(pick["spec"], history, rng, family),
             "mood": variety.pick_mood(family, history, rng), "texture": variety.pick_texture(family, rng),
-            "scene": variety.pick_scene(family, history, rng)}
+            "scene": variety.pick_scene(family, history, rng, pick["substyle"])}
 
 
 def normalize(raw: dict, pick: dict, length: int, cfg: dict, history: list, rng: random.Random,
@@ -221,6 +221,7 @@ def run(ctx: Ctx, trends: dict) -> dict:
         raw = {}
     brief = normalize(raw, pick, length, ctx.cfg, history, rng, fixed)
     brief["sections"] = plan_sections(brief, ctx.cfg, rng, engine_cap(ctx.paths, str(ctx.cfg["music"]["model"])))
+    brief.update(seo_shorts(brief, history, rng))
     if vc.get("distinct_variants", True) and int(ctx.cfg["music"].get("variants", 2)) >= 2:
         # 2nd variant = a different piece in the same style (bonus video is not a copy of the main one)
         brief["variants"] = [variety.main_spec(brief), variety.alt_spec(brief, pick["spec"], history, rng)]
@@ -235,6 +236,12 @@ def run(ctx: Ctx, trends: dict) -> dict:
     if raw:
         ctx.log.info("Title ideas: %s -> chosen '%s'", " / ".join(brief["title_candidates"]), brief["base_title"])
     return brief
+
+
+def seo_shorts(b: dict, history: list, rng: random.Random, avoid: list | None = None) -> dict:
+    """2.7.1: hooks (on-screen line) + title angles of this track's Shorts, rotated against recent tracks."""
+    from .. import seo
+    return seo.pick_shorts(b["substyle"], b["style_family"], history, rng, avoid)
 
 
 def variant_index(name: str | None) -> int | None:

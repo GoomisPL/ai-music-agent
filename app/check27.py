@@ -67,6 +67,23 @@ ok(B.variant_spec(b, "r0_v2.wav") == alt and B.variant_spec(b, "r1_v1.wav") == b
 used = HIST[-1]["title"].split(" – ")[0]
 ok(seo.pick_phrase("ambient drone", "ambient", HIST, random.Random(1)) != used, "search phrase rotates")
 
+# 2.7.1: Shorts hooks/angles rotate and fit the genre; scenes/instruments per substyle; one drum part
+s1 = seo.pick_shorts("cafe jazz", "acoustic", [], random.Random(1))
+ok(len(s1["hooks"]) == 3 and len(set(s1["hooks"])) == 3 and len(s1["short_angles"]) == 2, "3 different hooks + 2 angles")
+s2 = seo.pick_shorts("cafe jazz", "acoustic", [{"hooks": s1["hooks"], "short_angles": s1["short_angles"]}], random.Random(1))
+ok(not set(s2["hooks"]) & set(s1["hooks"]), f"next track gets other hooks ({s2['hooks']})")
+s3 = seo.pick_shorts("celtic", "acoustic", [], random.Random(2))
+ok(not any("cafe" in a.lower() or "coffee" in a.lower() for a in s3["hooks"] + s3["short_angles"]),
+   f"celtic Shorts without cafe lines ({s3['hooks']}, {s3['short_angles']})")
+ok(seo.short_hook("acoustic", 1, {"hooks": ["A", "B", "C"]}) == "B", "Short uses the hooks of its brief")
+sc = variety.pick_scene("acoustic", [], random.Random(3), "cafe jazz")
+ok("cafe" in sc or "coffee" in sc or "espresso" in sc, f"cafe jazz scene is a cafe ({sc})")
+cj = styles.CATALOG["acoustic"]["cafe jazz"]
+a2 = variety.alt_spec({"style_family": "acoustic", "substyle": "cafe jazz", "key": "C major", "bpm": 100, "mood": "warm",
+                       "instruments": cj["instruments"], "texture": ""}, cj, [], random.Random(4))
+drum_parts = [i for i in a2["instruments"] if variety.words(i) & {"drums", "drum", "snare", "percussion"}]
+ok(len(drum_parts) <= 1 and "fiddle" not in a2["instruments"], f"cafe jazz variant: jazz instruments, one drum part ({a2['instruments']})")
+
 failed = [w for c, w in results if not c]
 for c, w in results:
     print(f"  [{'OK  ' if c else 'FAIL'}] {w}")

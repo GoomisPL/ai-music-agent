@@ -354,7 +354,7 @@ def render_short(ctx: Ctx, quality: dict, idx: int = 0, start: int | None = None
     brief = ctx_brief(ctx)
     from .. import seo
     hook = ctx.out_dir / f"hook{idx + 1}.png"
-    hook_card(seo.short_hook(brief.get("style_family", ""), idx)).save(hook)
+    hook_card(seo.short_hook(brief.get("style_family", ""), idx, brief)).save(hook)
     frames = secs * 30 + 30
     art = (ctx.out_dir / "art_tall.png").exists()  # generated picture: no line through the middle of it
     zoom = ["min(zoom+0.0007,1.18)", "if(eq(on,0),1.18,max(zoom-0.0007,1.0))", "min(zoom+0.0005,1.14)"][idx % 3]
