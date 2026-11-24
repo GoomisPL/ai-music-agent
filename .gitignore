@@ -1,0 +1,59 @@
+# ============ LOCAL ONLY - never publish ============
+# login data and personal runtime data
+secrets/
+client_secret*.json
+token*.json
+*.env
+.env*
+state/
+logs/
+output/
+archive/
+config/
+setup-report.json
+DO-POBRANIA.txt
+
+# instructions, notes and changelogs (local)
+INSTRUKCJA*.md
+CO-NOWEGO*.md
+ROZWOJ*.md
+NOTATKI*.md
+*.local.md
+installers/
+
+# guidelines and context for AI assistants (Claude, Ollama, Aider)
+assistant/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+.aider*
+Modelfile
+
+# installer / service scripts (contain machine setup details)
+setup.ps1
+uninstall.ps1
+Uruchom-Setup.cmd
+Przygotuj-Instalatory.*
+Serwis.cmd
+tests/
+
+# ============ large / third-party / generated ============
+.venv/
+/models/
+/engines/
+/tools/
+/cache/
+/dist/
+*.exe
+*.zip
+*.wav
+*.mp4
+*.gguf
+*.safetensors
+
+# ============ python / editors ============
+__pycache__/
+*.pyc
+.vscode/
+.idea/
